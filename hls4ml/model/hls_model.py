@@ -717,10 +717,9 @@ class HLSModel(object):
         if 'linux' in sys.platform:
             backend = self.config.get_config_value('Backend', 'Vivado')
             if backend in ['Vivado', 'VivadoAccelerator']:
-                found = os.system('command -v vivado_hls > /dev/null')
-                if found != 0:
-                    raise Exception('Vivado HLS installation not found. Make sure "vivado_hls" is on PATH.')
-
+                hlscmd = 'vivado_hls'
+            elif backend == 'Vitis':
+                hlscmd = 'vitis_hls'
             elif backend == 'Intel':
                 raise NotImplementedError
             elif backend == 'Mentor':
@@ -732,10 +731,14 @@ class HLSModel(object):
             # Assume the project wasn't written before
             self.write()
 
+        found = os.system(f'command -v {hlscmd} > /dev/null')
+        if found != 0:
+            raise Exception(f'HLS installation not found. Make sure "{hlscmd}" is on PATH.')
+
         curr_dir = os.getcwd()
         os.chdir(self.config.get_output_dir())
-        os.system('vivado_hls -f build_prj.tcl "reset={reset} csim={csim} synth={synth} cosim={cosim} validation={validation} export={export} vsynth={vsynth}"'
-            .format(reset=reset, csim=csim, synth=synth, cosim=cosim, validation=validation, export=export, vsynth=vsynth))
+        os.system('{hlscmd} -f build_prj.tcl "reset={reset} csim={csim} synth={synth} cosim={cosim} validation={validation} export={export} vsynth={vsynth}"'
+            .format(hlscmd=hlscmd, reset=reset, csim=csim, synth=synth, cosim=cosim, validation=validation, export=export, vsynth=vsynth))
         os.chdir(curr_dir)
 
         return parse_vivado_report(self.config.get_output_dir())
